@@ -71,11 +71,14 @@ func (bus *Bus) Unsubscribe(sub *Subscription) error {
 	bus.lock.Lock()
 	defer bus.lock.Unlock()
 
+	var found bool
+
 	for _, eType := range sub.eventTypes {
 		if _, ok := bus.selectSubs[eType]; ok {
 			// unsubscribe from select events
 			for idx, eSub := range bus.selectSubs[eType] {
 				if eSub.id == sub.id {
+					found = true
 					bus.selectSubs[eType] = append(bus.selectSubs[eType][:idx], bus.selectSubs[eType][idx+1:]...)
 				}
 			}
@@ -85,6 +88,7 @@ func (bus *Bus) Unsubscribe(sub *Subscription) error {
 	// unsubscribe from all events
 	for idx, eSub := range bus.fullSubs {
 		if eSub.id == sub.id {
+			found = true
 			bus.fullSubs = append(bus.fullSubs[:idx], bus.fullSubs[idx+1:]...)
 		}
 	}
@@ -92,12 +96,16 @@ func (bus *Bus) Unsubscribe(sub *Subscription) error {
 	// close the sender channel
 	for idx, eSub := range bus.allSubs {
 		if eSub.id == sub.id {
+			found = true
 			close(eSub.sender)
 			bus.allSubs = append(bus.fullSubs[:idx], bus.allSubs[idx+1:]...)
 		}
 	}
 
-	return fmt.Errorf("could not find subscriber: %+v", sub)
+	if !found {
+		return fmt.Errorf("could not find subscriber: %+v", sub)
+	}
+	return nil
 }
 
 func (bus *Bus) Close() {
