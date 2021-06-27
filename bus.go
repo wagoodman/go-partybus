@@ -5,6 +5,12 @@ import (
 	"sync"
 )
 
+var ErrUnsubscribe = fmt.Errorf("unable to find subscription to unsubscribe")
+
+type Handler interface {
+	Handle(Event) error
+}
+
 type Publisher interface {
 	Publish(Event)
 }
@@ -103,7 +109,7 @@ func (bus *Bus) Unsubscribe(sub *Subscription) error {
 	}
 
 	if !found {
-		return fmt.Errorf("could not find subscriber: %+v", sub)
+		return ErrUnsubscribe
 	}
 	return nil
 }
